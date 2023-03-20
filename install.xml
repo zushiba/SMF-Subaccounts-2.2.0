@@ -41,15 +41,15 @@
 	</file>
 	<file name="$sourcedir/Load.php">
 		<operation>
-			<search position="before"><![CDATA[	global $cookiename, $user_info, $language, $context, $image_proxy_enabled, $image_proxy_secret, $boardurl;
+			<search position="before"><![CDATA[	global $cookiename, $user_info, $language, $context, $cache_enable;
 ]]></search>
-			<add><![CDATA[	global $scripturl, $context, $txt;
+			<add><![CDATA[	global $scripturl, $txt;
 ]]></add>
 		</operation>
 		<operation>
-			<search position="replace"><![CDATA[				SELECT mem.*, IFNULL(a.id_attach, 0) AS id_attach, a.filename, a.attachment_type
+			<search position="replace"><![CDATA[				SELECT mem.*, COALESCE(a.id_attach, 0) AS id_attach, a.filename, a.attachment_type, a.width AS "attachment_width", a.height AS "attachment_height"
 ]]></search>
-			<add><![CDATA[				SELECT mem.*, IFNULL(a.id_attach, 0) AS id_attach, a.filename, a.attachment_type,
+			<add><![CDATA[				SELECT mem.*, COALESCE(a.id_attach, 0) AS id_attach, a.filename, a.attachment_type, a.width AS "attachment_width", a.height AS "attachment_height",
 					IFNULL(sub.id_parent, 0) as id_parent
 ]]></add>
 		</operation>
@@ -67,7 +67,7 @@
 ]]></add>
 		</operation>
 		<operation>
-			<search position="before"><![CDATA[		$user_info['query_wanna_see_board'] = '(' . $user_info['query_see_board'] . ' AND b.id_board NOT IN (' . implode(',', $user_info['ignoreboards']) . '))';
+			<search position="before"><![CDATA[	$user_info['query_wanna_see_topic_board'] = $temp['query_wanna_see_topic_board'];
 ]]></search>
 			<add><![CDATA[
 	// And now setup their subaccounts (I do this here so I don't have to repeat code all over the place)
@@ -159,9 +159,9 @@
 ]]></add>
 		</operation>
 		<operation>
-			<search position="replace"><![CDATA[			mem.birthdate, mem.member_ip, mem.member_ip2, mem.posts, mem.last_login, mem.id_post_group, mem.lngfile, mem.id_group, mem.time_offset, mem.show_online,
+			<search position="replace"><![CDATA[			mem.birthdate, mem.member_ip, mem.member_ip2, mem.posts, mem.last_login, mem.id_post_group, mem.lngfile, mem.id_group, mem.time_offset, mem.timezone, mem.show_online,
 ]]></search>
-			<add><![CDATA[			mem.birthdate, mem.member_ip, mem.member_ip2, mem.posts, mem.last_login, mem.id_post_group, mem.lngfile, mem.id_group, mem.time_offset, mem.show_online, IFNULL(sub.id_parent, 0) as id_parent, mem.is_shareable,
+			<add><![CDATA[			mem.birthdate, mem.member_ip, mem.member_ip2, mem.posts, mem.last_login, mem.id_post_group, mem.lngfile, mem.id_group, mem.time_offset, mem.timezone, mem.show_online, IFNULL(sub.id_parent, 0) as id_parent, mem.is_shareable,
 ]]></add>
 		</operation>
 		<operation>
@@ -172,9 +172,9 @@
 ]]></add>
 		</operation>
 		<operation>
-			<search position="replace"><![CDATA[			mem.notify_types, lo.url, mem.ignore_boards, mem.password_salt, mem.pm_prefs, mem.buddy_list, mem.alerts';
+			<search position="replace"><![CDATA[			mem.total_time_logged_in, lo.url, mem.ignore_boards, mem.password_salt, mem.pm_prefs, mem.buddy_list, mem.alerts';
 ]]></search>
-			<add><![CDATA[			mem.notify_types, lo.url, mem.ignore_boards, mem.password_salt, mem.passwd, mem.pm_prefs, mem.buddy_list, mem.alerts, IFNULL(sub.id_parent, 0) as id_parent, mem.is_shareable';
+			<add><![CDATA[			mem.total_time_logged_in, lo.url, mem.ignore_boards, mem.password_salt, mem.passwd, mem.pm_prefs, mem.buddy_list, mem.alerts, IFNULL(sub.id_parent, 0) as id_parent, mem.is_shareable';
 ]]></add>
 		</operation>
 		<operation>
@@ -190,7 +190,7 @@
 ]]></add>
 		</operation>
 		<operation>
-			<search position="after"><![CDATA[	if (!empty($new_loaded_ids) && !empty($modSettings['cache_enable']) && $modSettings['cache_enable'] >= 3)
+			<search position="after"><![CDATA[	if (!empty($new_loaded_ids) && !empty($cache_enable) && $cache_enable >= 3)
 ]]></search>
 			<add><![CDATA[	if (!empty($new_loaded_ids) && ($context['user']['is_admin'] || !empty($modSettings['enableSubAccounts'])) && $set != 'minimal')
 	{
@@ -232,7 +232,7 @@
 ]]></add>
 		</operation>
 		<operation>
-			<search position="before"><![CDATA[		'local_time' => timeformat(time() + ($profile['time_offset'] - $user_info['time_offset']) * 3600, false),
+			<search position="before"><![CDATA[			'local_time' => timeformat(time(), false, $profile['timezone']),
 ]]></search>
 			<add><![CDATA[		'subaccounts' => $profile['subaccounts'],
 		'is_subaccount' => !empty($profile['id_parent']),
@@ -256,7 +256,7 @@
 		</operation>
 		<operation>
 			<search position="replace"><![CDATA[			SELECT passwd, id_member, id_group, lngfile, is_activated, email_address, additional_groups, member_name, password_salt,
-			passwd_flood, tfa_secret
+				passwd_flood, tfa_secret
 			FROM {db_prefix}members
 			WHERE email_address = {string:user_name}
 ]]></search>
@@ -774,7 +774,7 @@ function list_getNumSubaccounts()
 ]]></add>
 		</operation>
 		<operation>
-			<search position="after"><![CDATA[			LIMIT ' . $_REQUEST['start'] . ', ' . $modSettings['defaultMaxMembers'],
+			<search position="after"><![CDATA[			LIMIT {int:start}, {int:max}',
 ]]></search>
 			<add><![CDATA[				AND sub.id_member IS NULL
 ]]></add>
@@ -789,7 +789,7 @@ function list_getNumSubaccounts()
 ]]></add>
 		</operation>
 		<operation>
-			<search position="before"><![CDATA[		$context['members'][$member]['registered_date'] = strftime('%Y-%m-%d', $context['members'][$member]['registered_timestamp']);
+			<search position="before"><![CDATA[		$context['members'][$member]['registered_date'] = smf_strftime('%Y-%m-%d', $context['members'][$member]['registered_timestamp']);
 ]]></search>
 			<add><![CDATA[
 		if (!empty($context['members'][$member]['subaccounts']) && !empty($modSettings['subaccountsShowInMemberlist']))
@@ -852,7 +852,9 @@ function list_getNumSubaccounts()
 ]]></add>
 		</operation>
 		<operation>
-			<search position="before"><![CDATA[	$_POST['icon'] = !empty($attachIDs) && $_POST['icon'] == 'xx' ? 'clip' : $_POST['icon'];
+			<search position="before"><![CDATA[		if ((!file_exists($settings['theme_dir'] . '/images/post/' . $_POST['icon'] . '.png')) && (!file_exists($settings['default_theme_dir'] . '/images/post/' . $_POST['icon'] . '.png')))
+			$_POST['icon'] = 'xx';
+	}
 ]]></search>
 			<add><![CDATA[
 	// Modifying a message and there's a subaccount here
@@ -879,7 +881,8 @@ function list_getNumSubaccounts()
 ]]></add>
 		</operation>
 		<operation>
-			<search position="before"><![CDATA[			unset($msgOptions['approved']);
+			<search position="before"><![CDATA[			$msgOptions['poster_time'] = $row['poster_time'];
+		}
 
 		modifyPost($msgOptions, $topicOptions, $posterOptions);
 ]]></search>
@@ -1021,9 +1024,9 @@ function list_getNumSubaccounts()
 	</file>
 	<file name="$sourcedir/Profile.php">
 		<operation>
-			<search position="replace"><![CDATA[	global $modSettings, $memberContext, $profile_vars, $post_errors, $user_settings;
+			<search position="replace"><![CDATA[	global $modSettings, $memberContext, $profile_vars, $post_errors, $smcFunc;
 ]]></search>
-			<add><![CDATA[	global $modSettings, $memberContext, $profile_vars, $post_errors, $user_settings, $settings;
+			<add><![CDATA[	global $modSettings, $memberContext, $profile_vars, $post_errors, $smcFunc, $settings;
 ]]></add>
 		</operation>
 		<operation>
@@ -1088,15 +1091,16 @@ function list_getNumSubaccounts()
 	</file>
 	<file name="$sourcedir/Search.php">
 		<operation>
-			<search position="before"><![CDATA[		$userString = strtr($userString, array('%' => '\%', '_' => '\_', '*' => '%', '?' => '_'));
+			<search position="before"><![CDATA[		$userString = strtr($smcFunc['htmlspecialchars']($search_params['userspec'], ENT_QUOTES), array('&quot;' => '"', '%' => '\%', '_' => '\_', '*' => '%', '?' => '_'));
 ]]></search>
 			<add><![CDATA[		$search_params['subaccount'] = !empty($search_params['subaccount']) || !empty($_REQUEST['subaccount']);
 ]]></add>
 		</operation>
 		<operation>
-			<search position="before"><![CDATA[			$memberlist = array();
-			while ($row = $smcFunc['db_fetch_assoc']($request))
-				$memberlist[] = $row['id_member'];
+			<search position="before"><![CDATA[				$memberlist = array();
+
+				while ($row = $smcFunc['db_fetch_assoc']($request))
+					$memberlist[] = $row['id_member'];
 ]]></search>
 			<add><![CDATA[			if ($search_params['subaccount'])
 			{
@@ -1131,17 +1135,17 @@ function list_getNumSubaccounts()
 ]]></add>
 		</operation>
 		<operation>
-			<search position="replace"><![CDATA[	if (!empty($_SESSION['rc']) && $_SESSION['rc']['time'] > $modSettings['last_mod_report_action'] && $_SESSION['rc']['id'] == $user_info['id'])
+			<search position="replace"><![CDATA[	if (isset($_SESSION['rc']['reports']) && isset($_SESSION['rc']['member_reports']) && $_SESSION['rc']['time'] > $modSettings['last_mod_report_action'] && $_SESSION['rc']['id'] == $user_info['id'])
 ]]></search>
-			<add><![CDATA[	if (!empty($_SESSION['rc']) && $_SESSION['rc']['time'] > $modSettings['last_mod_report_action'] && ($_SESSION['rc']['id'] == $user_info['id'] || array_key_exists($_SESSION['rc']['id'], $user_info['subaccounts'])))
+			<add><![CDATA[	if (isset($_SESSION['rc']['reports']) && isset($_SESSION['rc']['member_reports']) && $_SESSION['rc']['time'] > $modSettings['last_mod_report_action'] && ($_SESSION['rc']['id'] == $user_info['id'] || array_key_exists($_SESSION['rc']['id'], $user_info['subaccounts'])))
 ]]></add>
 		</operation>
 	</file>
 	<file name="$sourcedir/Subs-Members.php">
 		<operation>
-			<search position="replace"><![CDATA[		'notify_announcements', 'notify_send_body', 'notify_regularity', 'notify_types',
+			<search position="replace"><![CDATA[		'new_pm', 'pm_prefs', 'show_online',
 ]]></search>
-			<add><![CDATA[		'notify_announcements', 'notify_send_body', 'notify_regularity', 'notify_types', 'is_shareable',
+			<add><![CDATA[		'new_pm', 'pm_prefs', 'show_online', 'is_shareable',
 ]]></add>
 		</operation>
 	</file>
@@ -1157,15 +1161,9 @@ function list_getNumSubaccounts()
 	</file>
 	<file name="$sourcedir/Subs.php">
 		<operation>
-			<search position="replace"><![CDATA[		'notify_announcements', 'notify_send_body', 'notify_regularity', 'notify_types', 'alerts',
+			<search position="replace"><![CDATA[		'new_pm', 'pm_prefs', 'gender', 'show_online', 'pm_receive_from', 'alerts',
 ]]></search>
-			<add><![CDATA[		'notify_announcements', 'notify_send_body', 'notify_regularity', 'notify_types', 'alerts', 'is_shareable',
-]]></add>
-		</operation>
-		<operation>
-			<search position="replace"><![CDATA[	if (strpos($_SERVER['REQUEST_URL'], 'action=dlattach') === false && strpos($_SERVER['REQUEST_URL'], 'action=viewsmfile') === false)
-]]></search>
-			<add><![CDATA[	if (strpos($_SERVER['REQUEST_URL'], 'action=dlattach') === false && strpos($_SERVER['REQUEST_URL'], 'action=viewsmfile') === false && !isset($_REQUEST['xml']))
+			<add><![CDATA[		'new_pm', 'pm_prefs', 'gender', 'show_online', 'pm_receive_from', 'alerts', 'is_shareable',
 ]]></add>
 		</operation>
 	</file>
@@ -1189,13 +1187,13 @@ function template_callback_subaccount_group_settings()
 	</file>
 	<file name="$themedir/Memberlist.template.php">
 		<operation>
-			<search position="replace"><![CDATA[					<td>
-						', $context['can_send_pm'] ? '<a href="' . $member['online']['href'] . '" title="' . $member['online']['text'] . '">' : '', $settings['use_image_buttons'] ? '<span class="' . ($member['online']['is_online'] == 1 ? 'on' : 'off') . '" title="' . $member['online']['text'] . '"></span>' : $member['online']['label'], $context['can_send_pm'] ? '</a>' : '', '
-					</td>
+			<search position="replace"><![CDATA[						<td class="is_online centertext">
+							', $context['can_send_pm'] ? '<a href="' . $member['online']['href'] . '" title="' . $member['online']['text'] . '">' : '', $settings['use_image_buttons'] ? '<span class="' . ($member['online']['is_online'] == 1 ? 'on' : 'off') . '" title="' . $member['online']['text'] . '"></span>' : $member['online']['label'], $context['can_send_pm'] ? '</a>' : '', '
+						</td>
 ]]></search>
-			<add><![CDATA[					<td ', !empty($member['subaccounts']) && !empty($context['subaccounts_online']) ? 'rowspan="2" ' : '', '>
-						', $context['can_send_pm'] ? '<a href="' . $member['online']['href'] . '" title="' . $member['online']['text'] . '">' : '', $settings['use_image_buttons'] ? '<span class="' . ($member['online']['is_online'] == 1 ? 'on' : 'off') . '" title="' . $member['online']['text'] . '"></span>' : $member['online']['label'], $context['can_send_pm'] ? '</a>' : '', '
-					</td>
+			<add><![CDATA[						<td class="is_online centertext" ', !empty($member['subaccounts']) && !empty($context['subaccounts_online']) ? 'rowspan="2" ' : '', '>
+							', $context['can_send_pm'] ? '<a href="' . $member['online']['href'] . '" title="' . $member['online']['text'] . '">' : '', $settings['use_image_buttons'] ? '<span class="' . ($member['online']['is_online'] == 1 ? 'on' : 'off') . '" title="' . $member['online']['text'] . '"></span>' : $member['online']['label'], $context['can_send_pm'] ? '</a>' : '', '
+						</td>
 ]]></add>
 		</operation>
 		<operation>
@@ -1220,7 +1218,7 @@ function template_callback_subaccount_group_settings()
 	</file>
 	<file name="$themedir/Post.template.php">
 		<operation>
-			<search position="after"><![CDATA[	// Now show the subject box for this post.
+			<search position="after"><![CDATA[	// THEME AUTHORS: Above this line is a great place to make customizations to the posting_fields array
 ]]></search>
 			<add><![CDATA[	if (!empty($context['subaccount_list']))
 	{
@@ -1301,16 +1299,19 @@ function template_callback_subaccount_group_settings()
 	</file>
 	<file name="$themedir/Search.template.php">
 		<operation>
-			<search position="replace"><![CDATA[						<label for="subject_only">', $txt['search_subject_only'], '
-							<input type="checkbox" name="subject_only" id="subject_only" value="1"', !empty($context['search_params']['subject_only']) ? ' checked' : '', ' class="input_check">
-						</label>
+			<search position="replace"><![CDATA[						<li>
+							<input type="checkbox" name="subject_only" id="subject_only" value="1"', !empty($context['search_params']['subject_only']) ? ' checked' : '', '>
+							<label for="subject_only">', $txt['search_subject_only'], '</label>
+						</li>
 ]]></search>
-			<add><![CDATA[						<label for="subject_only">', $txt['search_subject_only'], '
-							<input type="checkbox" name="subject_only" id="subject_only" value="1"', !empty($context['search_params']['subject_only']) ? ' checked' : '', ' class="input_check">
-						</label>
-						<label for="subaccount">', $txt['search_subaccount_users'], '
-							<input type="checkbox" name="subaccount" id="subaccount" value="1"', !empty($context['search_params']['subaccount']) ? ' checked' : '', ' class="input_check" tabindex="', $context['tabindex']++, '">
-						</label>
+			<add><![CDATA[						<li>
+							<input type="checkbox" name="subject_only" id="subject_only" value="1"', !empty($context['search_params']['subject_only']) ? ' checked' : '', '>
+							<label for="subject_only">', $txt['search_subject_only'], '</label>
+						</li>
+						<li>
+							<input type="checkbox" name="subject_only" id="subject_only" value="1"', !empty($context['search_params']['subject_only']) ? ' checked' : '', '>
+							<label for="subject_only">', $txt['search_subject_only'], '</label>
+						</li>
 ]]></add>
 		</operation>
 	</file>
@@ -1483,116 +1484,6 @@ $txt['registration_password_valid'] = 'Password is valid';
 $txt['subaccount_too_many_selected'] = 'Silly rabbit, tricks are for kids.  You can only have one parent in this life';
 $txt['subaccount_posts'] = 'All Posts:<span class="smalltext">(Including SubAccounts)</span>';
 $txt['search_subaccount_users'] = 'Search all subaccounts of the above user';
-/****  End of SubAccount Mod ****/
-]]></add>
-		</operation>
-	</file>
-	<file name="$languagedir/Modifications.russian-utf8.php">
-		<operation>
-			<search position="end" />
-			<add><![CDATA[/****  Start of SubAccount Mod ****/
-// These take care of the permissions
-$txt['permissiongroup_simple_subaccounts'] = 'Создать или изменить персонажей';
-$txt['permissiongroup_subaccounts'] = 'Персонажи';
-$txt['cannot_subaccounts_create_own'] = 'Извините, у Вас недостаточно прав, чтобы создавать персонажей для этого профиля.';
-$txt['cannot_subaccounts_create_any'] = $txt['cannot_subaccounts_create_own'];
-$txt['permissionname_subaccounts_create'] = 'Создать персонажа';
-$txt['permissionname_subaccounts_create_own'] = 'Мои персонажи';
-$txt['permissionname_subaccounts_create_any'] = 'Любые персонажи';
-$txt['permissionhelp_subaccounts_create'] = 'Создайте своих персонажей, или новый профиль для персонажа.';
-
-$txt['cannot_subaccounts_delete_own'] = 'Извините, у Вас недостаточно прав, чтобы удалить персонажа из этого профиля.';
-$txt['cannot_subaccounts_delete_any'] = $txt['cannot_subaccounts_delete_own'];
-$txt['permissionname_subaccounts_delete'] = 'Убить персонажа';
-$txt['permissionname_subaccounts_delete_own'] = 'Свои персонажи';
-$txt['permissionname_subaccounts_delete_any'] = 'Другие персонажи';
-$txt['permissionhelp_subaccounts_delete'] = 'Убрать персонажа из этого профиля.';
-
-$txt['cannot_subaccounts_merge_own'] = 'Извините, у вас недостаточно прав для слияния персонажей в этом профиле.';
-$txt['cannot_subaccounts_merge_any'] = $txt['cannot_subaccounts_merge_own'];
-$txt['permissionname_subaccounts_merge'] = 'Слияние персонажей';
-$txt['permissionname_subaccounts_merge_own'] = 'Свои';
-$txt['permissionname_subaccounts_merge_any'] = 'Любые персонажи';
-$txt['permissionhelp_subaccounts_merge'] = 'Соединить персонажей в профиле.';
-
-$txt['cannot_subaccounts_split_own'] = 'Извините, у вас недостаточно прав для разделения персонажей в этом профиле.';
-$txt['cannot_subaccounts_split_any'] = $txt['cannot_subaccounts_split_own'];
-$txt['permissionname_subaccounts_split'] = 'Расцепить персонажей';
-$txt['permissionname_subaccounts_split_own'] = 'Свои';
-$txt['permissionname_subaccounts_split_any'] = 'Любые персонажи';
-$txt['permissionhelp_subaccounts_split'] = 'Расцепить персонажей.';
-
-// Settings
-$txt['core_settings_item_subaccount'] = 'Персонажи';
-$txt['core_settings_item_subaccount_desc'] = 'Включение этой функции позволит пользователям завести новых персонажей, и редактировать их через свои профили.';
-$txt['subaccount_view_all'] = 'Показать персонажей';
-$txt['managesubaccounts_information'] = 'Если вы хотите включить или выключить эту функцию, используйте переключатель внизу, или кнопку вкл\выкл на центральной странице функций.<br /><br />
-	Когда функция включена, вы можете настроить различные опции, включая настройки максимального количества персонажей, которых может иметь каждый пользователь, а также решить, включать новых персонажей в пользовательскую группу профиля или нет. Если вы хотите настроить права для каждой группы, посетите  <a href="' . $scripturl . '?action=admin;area=permissions">Permissions</a> section of your admin panel.';
-$txt['enableSubAccounts'] = 'Разрешить пользователям создавать персонажей';
-$txt['maxSubAccounts'] = 'Максимальное количество персонажей <div class="smalltext">(0 for unlimited)</div>';
-$txt['subaccountsInheritParentGroup'] = 'Новые персонажи входят в группы профиля';
-$txt['subaccountsShowInMemberlist'] = 'Показать список групп персонажа';
-$txt['subaccountsShowInProfile'] = 'Показывать персонажей в профилях пользователей';
-$txt['subaccountsEnablePortalBlock'] = 'Показывать блок на портале <div class="smalltext">(Future Feature)</div>';
-$txt['subaccount_no_portal'] = 'Портал недоступен';
-$txt['subaccount_configure_groups'] = 'Конфигурировать персонажей для списка';
-$txt['subaccount_configure_groups_desc'] = 'Этот раздел позволяет настроить количество персонажей, которых может иметь каждый член группы. Пользователь получает разрешение на то количество персонажей, которое позволено иметь членам его основной группы. 0 для бесконечного количества.';
-$txt['subaccount_group_settings'] = 'Настроить персонажей в списке пользователей';
-
-// Modlog
-$txt['modlog_ac_delete_subaccount'] = 'Удаленный персонаж &quot;{name}&quot; from &quot;{parent}&quot;';
-$txt['modlog_ac_merge_subaccount'] = 'Прикрепленный персонаж &quot;{name}&quot; into &quot;{parent}&quot;';
-
-// These take care of the profile stuff
-// First the buttons
-$txt['button_create'] = 'Создать / Присоединить';
-$txt['button_merge'] = 'Слить в один';
-$txt['button_split'] = 'Расцепить';
-$txt['button_parent'] = 'Перейти в этого персонажа/сменить профиль';
-$txt['button_share'] = 'Сделать (не)разделимым';
-
-$txt['managesubaccounts'] = 'Управление персонажами';
-$txt['subaccount'] = 'Персонаж';
-$txt['parent_account'] = 'Основной профиль';
-$txt['account_created'] = 'Профиль создан';
-$txt['shared'] = 'Разделен';
-$txt['subaccounts'] = 'Персонажи';
-$txt['modifysubaccounts_desc'] = 'Здесь вы можете управлять своими персонажами. В зависимости от выбора администрации, вы можете создавать и удалять персонажей, сливать персонажей в один, превращать основные профили в персонажей (если у вас есть пароль) - и наоборот. Также, вы можете нарезать аккаунты мелко, посыпать специями, запускать их в космос, играть на них  музыку, использовать как подставку, и, на худой конец, забивать ими гвозди. <br /><br />Внимание! Управлять "дочерними" персонажами надо из профиля Вашего основного аккаунта - это тот, под которым Вы зарегистрированы на этом форуме. Из основного профиля можно редактировать аватары персонажей и все подписи. Удаление персонажа переместит все его посты, темы, модерационные действия, баны и ошибки в основной профиль. Слияние персонажей переместит всё в одного';
-$txt['subaccounts_merge_desc'] = 'Выберите профиль, который вы хотите слить с персонажем  "<strong>%s</strong>" into.';
-$txt['create_subaccount_desc'] = 'Введите имя вашего персонажа. Если вы хотите превратить существующий профиль в персонажа, то флаг вам в руки, тогда введите пароль этого профиля. Вы можете нажать иконку с восклицательным знаком, чтобы проверить имя персонажа на доступность.';
-$txt['subaccount_create_pass'] = 'Если аккаунт занят или является чужим персонажем, введите пароль!';
-$txt['subaccount_create_pass_admin'] = 'Нужен ваш пароль для создания нового персонажа. Если вы конвертируете профиль в персонажа, введите пароль профиля.';
-$txt['subaccounts_split_desc'] = 'Введите адрес электронной почты и новый пароль, для каждого персонажа, которых вы хотите разделить.';
-$txt['subaccounts_reassign_desc'] = 'Введите Ваш пароль.';
-$txt['current_subaccounts'] = 'Поточные персонажи';
-$txt['current_subaccounts_none'] = 'Нет персонажей, присоединенных к этому профилю.';
-$txt['change_subaccount'] = 'Смена персонажа';
-$txt['choose_subaccount'] = 'Выбрать персонажа';
-$txt['use_subaccount'] = 'Использовать персонажа';
-$txt['identification_by_smf'] = 'Используется для индентификации на форуме.';
-$txt['subaccount_create_success'] = 'Вы успешно убили персонажа.';
-$txt['subaccount_delete_success'] = 'Вы успешно слили персонажей воедино';
-$txt['subaccount_merge_success'] = 'Вы успешно слили персонажей воедино';
-$txt['deleteAccount_subaccount'] = 'Таки удалить персонажа?';
-$txt['deleteAccount_subaccount_sure'] = 'Таки вы точно отвечаете за последствия?';
-$txt['no_subaccount_login'] = 'Вы не можете использовать этого персонажа. Для входа используется только основной профиль.';
-$txt['cannot_delete_subaccount'] = 'Вы не можете удалить этого персонажа.';
-$txt['cannot_delete_subaccount_shared'] = 'Вы не можете удалить разделённого персонажа, которого не создавали.';
-$txt['subaccount_error'] = 'Вот такая вот ошибочка вышла';
-$txt['subaccount_not_selected'] = 'Персонажи не выбраны';
-$txt['subaccount_cannot_create'] = 'Нельзя создать персонажа с таким именем. Очевидно, оно матерное';
-$txt['cannot_merge_subaccounts_of_subaccounts'] = 'Персонажи не могут иметь персонажей, это слишком шизоидно даже для нас.';
-$txt['registration_username_available'] = 'Имя доступно';
-$txt['registration_username_unavailable'] = 'Имя недоступно';
-$txt['registration_username_check'] = 'Проверить имя на доступность';
-$txt['registration_password_short'] = 'Пароль слишком короткий';
-$txt['registration_password_reserved'] = 'Пароль содержит ваше имя и/или адрес почты';
-$txt['registration_password_numbercase'] = 'Пароль должен содержать большие и малые буквы, а также цифры';
-$txt['registration_password_no_match'] = 'Пароли не совпадают';
-$txt['registration_password_valid'] = 'Пароль верный';
-$txt['subaccount_too_many_selected'] = 'Смертный, твои уловки смешны. У тебя может быть всего один основной профиль, ибо так решили Боги';
-$txt['subaccount_posts'] = 'Всего сообщений (включая персонажей):</span>';
-$txt['search_subaccount_users'] = 'Искать по всем персонажам вышеуказанного пользователя';
 /****  End of SubAccount Mod ****/
 ]]></add>
 		</operation>

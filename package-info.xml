@@ -2,11 +2,11 @@
 <!DOCTYPE package-info SYSTEM "http://www.simplemachines.org/xml/package-info">
 <package-info xmlns="http://www.simplemachines.org/xml/package-info" xmlns:smf="http://www.simplemachines.org/">
 	<id>wqrts:subaccounts</id>
-	<version>2.1.2</version>
+	<version>2.2.0</version>
 	<name>SubAccounts Mod</name>
 	<type>modification</type>
 
-	<install for="2.1 Beta 2">
+	<install for="2.1 Beta 3 - 2.1.999">
 		<readme parsebbc="true">readme.txt</readme>
 		<database>add_settings.php</database>
 		<modification type="file">install.xml</modification>
@@ -22,7 +22,7 @@
 		<redirect url="?action=admin;area=corefeatures">redirect.txt</redirect>
 	</install>
 
-	<uninstall for="2.1 Beta 2">
+	<uninstall for="2.1 Beta 3 - 2.1.999">
 		<modification type="file" reverse="true">install.xml</modification>
 		<remove-file name="$sourcedir/SubAccount.php" />
 		<remove-file name="$themedir/SubAccount.template.php" />
