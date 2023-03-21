@@ -1308,6 +1308,8 @@ function SwitchSubAccount($location = '')
 	// Perhaps incorporating password checking would be good in this... future feature?
 	// For now we'll rely on current logged in info and a valid session...
 	checkSession('request');
+	
+	
 
 	// Clean the variable, just in case...
 	$_REQUEST['subaccount'] = !empty($_REQUEST['subaccount']) ? (int) $_REQUEST['subaccount'] : -1;
@@ -1329,13 +1331,30 @@ function SwitchSubAccount($location = '')
 	$new_user = $smcFunc['db_fetch_assoc']($request);
 	$smcFunc['db_free_result']($request);
 
-	// Let's setup a new cookie then redirect to wherever we came from
-	if (isset($_COOKIE[$cookiename]) && preg_match('~^a:[34]:\{i:0;i:\d{1,7};i:1;s:(0|128):"([a-fA-F0-9]{128})?";i:2;[id]:\d{1,14};(i:3;i:\d;)?\}$~', $_COOKIE[$cookiename]) === 1)
-		list (, , $timeout) = @unserialize($_COOKIE[$cookiename]);
-	elseif (isset($_SESSION['login_' . $cookiename]))
-		list (, , $timeout) = @unserialize($_SESSION['login_' . $cookiename]);
-	else
-		trigger_error('SwitchSubAccount(): Cannot change subaccount without a session or cookie', E_USER_ERROR);
+
+		//Ripped code right from LogInOut.php to fix the old dated cookie model. Quick, easy, hacky, but works!
+		// First check for 2.1 json-format cookie in $_COOKIE
+		if (isset($_COOKIE[$cookiename]) && preg_match('~^{"0":\d+,"1":"[0-9a-f]*","2":\d+~', $_COOKIE[$cookiename]) === 1)
+			list (,, $timeout) = $smcFunc['json_decode']($_COOKIE[$cookiename], true);
+
+		// Try checking for 2.1 json-format cookie in $_SESSION
+		elseif (isset($_SESSION['login_' . $cookiename]) && preg_match('~^{"0":\d+,"1":"[0-9a-f]*","2":\d+~', $_SESSION['login_' . $cookiename]) === 1)
+			list (,, $timeout) = $smcFunc['json_decode']($_SESSION['login_' . $cookiename]);
+
+		// Next, try checking for 2.0 serialized string cookie in $_COOKIE
+		elseif (isset($_COOKIE[$cookiename]) && preg_match('~^a:[34]:\{i:0;i:\d+;i:1;s:(0|40):"([a-fA-F0-9]{40})?";i:2;[id]:\d+;~', $_COOKIE[$cookiename]) === 1)
+			list (,, $timeout) = safe_unserialize($_COOKIE[$cookiename]);
+
+		// Last, see if you need to fall back on checking for 2.0 serialized string cookie in $_SESSION
+		elseif (isset($_SESSION['login_' . $cookiename]) && preg_match('~^a:[34]:\{i:0;i:\d+;i:1;s:(0|40):"([a-fA-F0-9]{40})?";i:2;[id]:\d+;~', $_SESSION['login_' . $cookiename]) === 1)
+			list (,, $timeout) = safe_unserialize($_SESSION['login_' . $cookiename]);
+
+		else
+		{
+			loadLanguage('Errors');
+			trigger_error('SwitchSubAccount(): Cannot change subaccount without a session or cookie', E_USER_ERROR);
+			//trigger_error($txt['login_no_session_cookie'], E_USER_ERROR);
+		}
 
 	// Store the timeout, so the same one is used for possibly too cookies
 	$timeout -= time();
