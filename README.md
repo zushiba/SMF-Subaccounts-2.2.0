@@ -10,5 +10,5 @@ Modification of SMF-Subaccounts-2.1.2 to be installable and workable on SMF 2.1.
 Link to original mod: http://www.simplemachines.org/community/index.php?topic=347710.0
 
 # Known Issues
-* **Member Switching:** It is currently impossible to switch to a subaccount. Posting as a subacount is still possible.
+* ~~**Member Switching:** It is currently impossible to switch to a subaccount. Posting as a subacount is still possible.~~ Fixed!
 * **Member list:** Subaccounts do not currently show on member list, despite the option to show them on member list being selected.
